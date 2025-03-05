@@ -1,6 +1,6 @@
 package pl.com.foks.vehicle;
 
-import pl.com.foks.rental.Client;
+import pl.com.foks.rental.User;
 import pl.com.foks.rental.Rental;
 
 import java.util.Objects;
@@ -54,8 +54,8 @@ public abstract class Vehicle {
         throw new IllegalArgumentException("Vehicle is not in the rental");
     }
 
-    public boolean canBeRented(Client client) {
-        return !isRented();
+    public boolean canBeRented(User user) {
+        return !isRented() && user.getRentedVehicle() == null;
     }
 
     public String toCSV() {
@@ -69,6 +69,8 @@ public abstract class Vehicle {
             throw new IllegalArgumentException("Invalid data");
         }
     }
+
+    public abstract Vehicle clone();
 
     @Override
     public String toString() {

@@ -2,34 +2,37 @@ package pl.com.foks.rental;
 
 import pl.com.foks.vehicle.Vehicle;
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class Client {
+public class User {
+    private final Role role;
     private final String name;
     private final DriversLicenseCategory driversLicenseCategory;
-    private final List<Vehicle> rentedVehicles;
+    private Vehicle rentedVehicle;
 
-    public Client(String name, DriversLicenseCategory driversLicenseCategory) {
+    public User(Role role, String name, DriversLicenseCategory driversLicenseCategory) {
+        this.role = role;
         this.name = name;
         this.driversLicenseCategory = driversLicenseCategory;
-        this.rentedVehicles = new ArrayList<>();
+        this.rentedVehicle = null;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public String getName() {
+        return name;
     }
 
     public DriversLicenseCategory getDriversLicenseCategory() {
         return driversLicenseCategory;
     }
 
-    boolean hasRentedVehicle(Vehicle vehicle) {
-        return rentedVehicles.contains(vehicle);
+    public Vehicle getRentedVehicle() {
+        return rentedVehicle;
     }
 
-    void rentVehicle(Vehicle vehicle) {
-        rentedVehicles.add(vehicle);
-    }
-
-    void returnVehicle(Vehicle vehicle) {
-        rentedVehicles.remove(vehicle);
+    void setRentedVehicle(Vehicle vehicle) {
+        rentedVehicle = vehicle;
     }
 
     @Override
@@ -37,8 +40,12 @@ public class Client {
         return "Client{" +
                 "name='" + name + '\'' +
                 ", driversLicenseCategory=" + driversLicenseCategory +
-                ", rentedVehicles=" + rentedVehicles +
+                ", rentedVehicle=" + rentedVehicle +
                 '}';
+    }
+
+    public enum Role {
+        ADMIN, CLIENT
     }
 
     public enum DriversLicenseCategory {

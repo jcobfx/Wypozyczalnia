@@ -7,7 +7,7 @@ import pl.com.foks.vehicle.Vehicle;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Rental implements IVehicleRepository {
+public class Rental implements IRental {
     private final RentalDataManager dataManager;
 
     private final List<Vehicle> vehicles;
@@ -17,14 +17,11 @@ public class Rental implements IVehicleRepository {
         this.dataManager = dataManager;
     }
 
-    private boolean canRentVehicle(Client client, Vehicle vehicle) {
-        return vehicle.canBeRented(client);
-    }
-
     @Override
-    public boolean rentVehicle(Client client, Vehicle vehicle) {
-        if (vehicles.contains(vehicle) && canRentVehicle(client, vehicle)) {
-            client.rentVehicle(vehicle);
+    public boolean rentVehicle(User user, Vehicle vehicle) {
+        assert user != null && vehicle != null;
+        if (vehicles.contains(vehicle) && vehicle.canBeRented(user)) {
+            user.setRentedVehicle(vehicle);
             vehicle.setRented(this, true);
             save();
             return true;
@@ -33,9 +30,10 @@ public class Rental implements IVehicleRepository {
     }
 
     @Override
-    public boolean returnVehicle(Client client, Vehicle vehicle) {
-        if (vehicles.contains(vehicle) && vehicle.isRented() && client.hasRentedVehicle(vehicle)) {
-            client.returnVehicle(vehicle);
+    public boolean returnVehicle(User user, Vehicle vehicle) {
+        assert user != null && vehicle != null;
+        if (vehicle.isRented() && user.getRentedVehicle().equals(vehicle) && vehicles.contains(vehicle)) {
+            user.setRentedVehicle(null);
             vehicle.setRented(this, false);
             save();
             return true;
@@ -45,7 +43,11 @@ public class Rental implements IVehicleRepository {
 
     @Override
     public List<Vehicle> getVehicles() {
-        return List.copyOf(vehicles);
+        List<Vehicle> vehicles = new ArrayList<>();
+        for (Vehicle vehicle : this.vehicles) {
+            vehicles.add(vehicle.clone());
+        }
+        return vehicles;
     }
 
     @Override

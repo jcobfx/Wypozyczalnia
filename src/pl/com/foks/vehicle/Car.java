@@ -1,6 +1,6 @@
 package pl.com.foks.vehicle;
 
-import pl.com.foks.rental.Client;
+import pl.com.foks.rental.User;
 
 public class Car extends Vehicle {
     public Car() {
@@ -12,13 +12,18 @@ public class Car extends Vehicle {
     }
 
     @Override
-    public boolean canBeRented(Client client) {
-        return super.canBeRented(client) && Client.DriversLicenseCategory.canDrive(client.getDriversLicenseCategory(), Client.DriversLicenseCategory.B);
+    public boolean canBeRented(User user) {
+        return super.canBeRented(user) && User.DriversLicenseCategory.canDrive(user.getDriversLicenseCategory(), User.DriversLicenseCategory.B);
     }
 
     @Override
     public Car build(String[] data) {
         validateData(data, 6);
         return new Car(Integer.parseInt(data[0]), data[1], data[2], Integer.parseInt(data[3]), Integer.parseInt(data[4]), Boolean.parseBoolean(data[5]));
+    }
+
+    @Override
+    public Car clone() {
+        return new Car(this.getId(), this.getBrand(), this.getModel(), this.getYear(), this.getPrice(), this.isRented());
     }
 }

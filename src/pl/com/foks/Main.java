@@ -1,30 +1,32 @@
 package pl.com.foks;
 
 import pl.com.foks.data.RentalDataManager;
-import pl.com.foks.rental.Client;
+import pl.com.foks.rental.User;
 import pl.com.foks.rental.Rental;
+import pl.com.foks.vehicle.Vehicle;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Scanner;
+import java.util.*;
 import java.util.logging.Logger;
 
 public class Main {
     private static final Logger logger = Logger.getLogger(Main.class.getName());
 
-    private static Rental rental = null;
-    private static Client client = null;
-
     public static final Path WORKSPACE = Path.of(System.getProperty("user.home"), "rental");
     public static final Path RENTALS = WORKSPACE.resolve("rentals.csv");
+
+    private static Rental rental = null;
+    private static Map<User, String> users = new HashMap<>();
+    private static User currentUser = null;
 
     static {
         if (!WORKSPACE.toFile().exists()) {
             WORKSPACE.toFile().mkdirs();
         }
+        users.put(new User(User.Role.ADMIN, "admin", User.DriversLicenseCategory.B), "admin");
     }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
@@ -42,35 +44,68 @@ public class Main {
 
     private static void run() {
         final Scanner scanner = new Scanner(System.in);
-        logger.info("Create user (user <name> <driversCategory>)");
+        logger.info("""
+                Register user (register <name> <driversCategory> <password>)
+                Login (login <name> <password>)
+                """);
         while (scanner.hasNextLine()) {
-            if (client == null) {
+            if (currentUser == null) {
                 final String line = scanner.nextLine();
                 final String[] split = line.split(" ");
-                if (split.length == 3 && split[0].equals("user")) {
-                    final String name = split[1];
-                    final String driversCategory = split[2];
-                    if (Arrays.stream(Client.DriversLicenseCategory.values()).noneMatch(licenseCategory -> licenseCategory.name().equals(driversCategory))) {
-                        logger.info("Create user (user <name> <driversCategory>)");
-                        continue;
+                switch (split[0]) {
+                    case "help": {
+                        logger.info("Available commands: help, register <name> <driversCategory> <password>, login <name> <password>, exit");
+                        break;
                     }
-                    client = new Client(name, Client.DriversLicenseCategory.valueOf(driversCategory));
-                    logger.info("User created");
-                } else if (split[0].equals("exit")) {
-                    System.exit(0);
-                } else {
-                    logger.info("Create user (user <name> <driversCategory>)");
+                    case "exit": {
+                        System.exit(0);
+                    }
+                    case "login": {
+                        final String name = split[1];
+                        final String password = split[2];
+                        users.entrySet().stream().filter(entry -> Objects.equals(entry.getKey().getName(), name) &&
+                                Objects.equals(entry.getValue(), password)).findFirst()
+                                .ifPresent(entry -> currentUser = entry.getKey());
+                        if (currentUser != null) {
+                            logger.info("User logged in");
+                        } else {
+                            logger.info("Login failed");
+                        }
+                        break;
+                    }
+                    case "register": {
+                        final String name = split[1];
+                        final String driversCategory = split[2];
+                        final String password = split[3];
+                        if (Arrays.stream(User.DriversLicenseCategory.values()).noneMatch(licenseCategory -> licenseCategory.name().equals(driversCategory))) {
+                            logger.info("Register user (register <name> <driversCategory> <password>)");
+                            continue;
+                        }
+                        currentUser = new User(User.Role.CLIENT, name, User.DriversLicenseCategory.valueOf(driversCategory));
+                        users.put(currentUser, password);
+                        logger.info("User registered");
+                        break;
+                    }
+                    default: {
+                        logger.info("""
+                            Register user (register <name> <driversCategory> <password>)
+                            Login (login <name> <password>)
+                            """);
+                    }
                 }
             } else {
                 String line = scanner.nextLine();
                 String[] split = line.split(" ");
                 switch (split[0]) {
                     case "help": {
-                        logger.info("Available commands: help, self, list, rent <vehicleId>, return <vehicleId>, exit");
+                        logger.info("Available commands: help, self, list, rent <vehicleId>, return <vehicleId>, exit, logout");
+                        if (currentUser.getRole() == User.Role.ADMIN) {
+                            logger.info("Admin commands: add, remove");
+                        }
                         break;
                     }
                     case "self": {
-                        logger.info(client.toString());
+                        logger.info(currentUser.toString());
                         break;
                     }
                     case "list": {
@@ -84,7 +119,7 @@ public class Main {
                         if (split.length == 2) {
                             int id = Integer.parseInt(split[1]);
                             if (id >= 0 && id < rental.getVehicles().size()) {
-                                if (rental.rentVehicle(client, rental.getVehicles().get(id))) {
+                                if (rental.rentVehicle(currentUser, rental.getVehicles().get(id))) {
                                     logger.info("Vehicle rented");
                                 } else {
                                     logger.info("Cannot rent vehicle");
@@ -101,7 +136,7 @@ public class Main {
                         if (split.length == 2) {
                             int id = Integer.parseInt(split[1]);
                             if (id >= 0 && id < rental.getVehicles().size()) {
-                                if (rental.returnVehicle(client, rental.getVehicles().get(id))) {
+                                if (rental.returnVehicle(currentUser, rental.getVehicles().get(id))) {
                                     logger.info("Vehicle returned");
                                 } else {
                                     logger.info("Cannot return vehicle");
@@ -117,6 +152,27 @@ public class Main {
                     case "exit": {
                         rental.save();
                         System.exit(0);
+                    }
+                    case "logout": {
+                        currentUser = null;
+                        logger.info("User logged out");
+                        logger.info("""
+                            Register user (register <name> <driversCategory> <password>)
+                            Login (login <name> <password>)
+                            """);
+                        break;
+                    }
+                    case "add": {
+
+                    }
+                    case "remove": {
+
+                    }
+                    default: {
+                        logger.info("Available commands: help, self, list, rent <vehicleId>, return <vehicleId>, exit, logout");
+                        if (currentUser.getRole() == User.Role.ADMIN) {
+                            logger.info("Admin commands: add, remove");
+                        }
                     }
                 }
             }
