@@ -1,0 +1,4 @@
+Manifest-Version: 1.0
+Main-Class: pl.com.foks.Main
+Class-Path: pl.com.foks
+
