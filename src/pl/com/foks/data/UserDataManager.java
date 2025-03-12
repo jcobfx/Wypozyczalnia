@@ -1,6 +1,5 @@
 package pl.com.foks.data;
 
-import pl.com.foks.exceptions.RentalException;
 import pl.com.foks.repository.user.User;
 
 import java.io.*;
@@ -15,9 +14,9 @@ public class UserDataManager implements IRepositoryDataManager<User> {
      * Creates a new instance of the UserDataManager
      * @param users path to the file with user data
      */
-    public UserDataManager(Path users) {
+    public UserDataManager(Path users) throws FileNotFoundException {
         if (!users.toFile().exists()) {
-            throw new RentalException("User data file does not exist");
+            throw new FileNotFoundException("User data file does not exist");
         }
         this.users = users;
     }
@@ -27,12 +26,8 @@ public class UserDataManager implements IRepositoryDataManager<User> {
         BufferedWriter writer = new BufferedWriter(new FileWriter(users.toFile(), false));
         List<String> usersCSV = new ArrayList<>();
         userList.forEach(user -> usersCSV.add(user.toCSV()));
-        try {
-            writer.write(String.join("\n", usersCSV));
-            writer.flush();
-        } catch (IOException e) {
-            throw new RentalException("Cannot write to file", e);
-        }
+        writer.write(String.join("\n", usersCSV));
+        writer.flush();
     }
 
     @Override

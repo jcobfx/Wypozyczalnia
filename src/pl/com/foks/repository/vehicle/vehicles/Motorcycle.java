@@ -1,6 +1,6 @@
 package pl.com.foks.repository.vehicle.vehicles;
 
-import pl.com.foks.util.DataUtils;
+import pl.com.foks.util.ValidatorUtils;
 
 import java.util.Objects;
 
@@ -23,7 +23,7 @@ public class Motorcycle extends Vehicle {
      * @return created motorcycle object
      */
     public static Motorcycle fromCSV(String[] data) {
-        DataUtils.validateData(data, 7);
+        ValidatorUtils.validateData(data, 7);
         return new Motorcycle(Integer.parseInt(data[0]), data[1], data[2], Integer.parseInt(data[3]),
                 Integer.parseInt(data[4]), Boolean.parseBoolean(data[5]), data[6]);
     }

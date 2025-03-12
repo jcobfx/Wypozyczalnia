@@ -2,7 +2,7 @@ package pl.com.foks.repository.user;
 
 import pl.com.foks.repository.IRepositoryEntry;
 import pl.com.foks.repository.vehicle.vehicles.Vehicle;
-import pl.com.foks.util.DataUtils;
+import pl.com.foks.util.ValidatorUtils;
 
 public class User implements IRepositoryEntry<User> {
     private final int id;
@@ -17,6 +17,11 @@ public class User implements IRepositoryEntry<User> {
         this.login = login;
         this.password = password;
         this.rentedVehicle = null;
+    }
+
+    @Override
+    public int getIdentifier() {
+        return id;
     }
 
     public Role getRole() {
@@ -40,11 +45,6 @@ public class User implements IRepositoryEntry<User> {
     }
 
     @Override
-    public int getIdentifier() {
-        return id;
-    }
-
-    @Override
     public User deepClone() {
         return new User(id, role, login, password);
     }
@@ -55,7 +55,7 @@ public class User implements IRepositoryEntry<User> {
      * @return User object
      */
     public static User fromCSV(String[] data) {
-        DataUtils.validateData(data, 4);
+        ValidatorUtils.validateData(data, 4);
         return new User(Integer.parseInt(data[0]), Role.valueOf(data[1]), data[2], data[3]);
     }
 
@@ -66,7 +66,7 @@ public class User implements IRepositoryEntry<User> {
 
     @Override
     public String toString() {
-        return "%d. %s %s".formatted(id, role, login);
+        return "%d. %s %s\nRented: %s".formatted(id, role, login, rentedVehicle != null ? rentedVehicle : "none");
     }
 
     public enum Role {

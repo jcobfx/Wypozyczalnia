@@ -1,6 +1,6 @@
 package pl.com.foks.repository.vehicle.vehicles;
 
-import pl.com.foks.util.DataUtils;
+import pl.com.foks.util.ValidatorUtils;
 
 public class Car extends Vehicle {
     public Car() {
@@ -17,7 +17,7 @@ public class Car extends Vehicle {
      * @return created car object
      */
     public static Car fromCSV(String[] data) {
-        DataUtils.validateData(data, 6);
+        ValidatorUtils.validateData(data, 6);
         return new Car(Integer.parseInt(data[0]), data[1], data[2], Integer.parseInt(data[3]), Integer.parseInt(data[4]), Boolean.parseBoolean(data[5]));
     }
 

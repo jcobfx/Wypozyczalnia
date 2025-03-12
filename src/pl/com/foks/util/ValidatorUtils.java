@@ -2,7 +2,7 @@ package pl.com.foks.util;
 
 import java.util.function.Consumer;
 
-public class DataUtils {
+public class ValidatorUtils {
     /**
      * Validates the data length
      * @param data data to validate
@@ -27,6 +27,6 @@ public class DataUtils {
         dataConsumer.accept(data);
     }
 
-    private DataUtils() {
+    private ValidatorUtils() {
     }
 }

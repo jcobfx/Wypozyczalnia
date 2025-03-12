@@ -1,10 +1,12 @@
 package pl.com.foks.repository.vehicle;
 
 import pl.com.foks.data.IRepositoryDataManager;
-import pl.com.foks.exceptions.RentalException;
+import pl.com.foks.exceptions.FailedRepositoryLoadException;
+import pl.com.foks.exceptions.FailedRepositorySaveException;
 import pl.com.foks.repository.user.User;
 import pl.com.foks.repository.vehicle.vehicles.Vehicle;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,7 +27,6 @@ public class VehicleRepository implements IVehicleRepository {
         if (vehicle != null && !vehicle.isRented() && user.getRentedVehicle() == null) {
             user.setRentedVehicle(vehicle);
             vehicle.setRented(this, true);
-            save();
             return true;
         }
         return false;
@@ -38,7 +39,6 @@ public class VehicleRepository implements IVehicleRepository {
         if (vehicle != null && vehicle.isRented() && user.getRentedVehicle() == vehicle) {
             user.setRentedVehicle(null);
             vehicle.setRented(this, false);
-            save();
             return true;
         }
         return false;
@@ -74,7 +74,6 @@ public class VehicleRepository implements IVehicleRepository {
     public boolean addVehicle(Vehicle vehicle) {
         if (vehicles.stream().noneMatch(v -> v.getIdentifier() == vehicle.getIdentifier())) {
             vehicles.add(vehicle);
-            save();
             return true;
         }
         return false;
@@ -83,7 +82,6 @@ public class VehicleRepository implements IVehicleRepository {
     @Override
     public boolean removeVehicle(int vehicleId) {
         if (vehicles.removeIf(v -> v.getIdentifier() == vehicleId)) {
-            save();
             return true;
         }
         return false;
@@ -93,8 +91,8 @@ public class VehicleRepository implements IVehicleRepository {
     public void save() {
         try {
             dataManager.save(vehicles);
-        } catch (Exception e) {
-            throw new RentalException("Cannot save vehicles", e);
+        } catch (IOException e) {
+            throw new FailedRepositorySaveException("Cannot save vehicles", e);
         }
     }
 
@@ -103,8 +101,8 @@ public class VehicleRepository implements IVehicleRepository {
         try {
             vehicles.clear();
             vehicles.addAll(dataManager.load());
-        } catch (Exception e) {
-            throw new RentalException("Cannot load vehicles", e);
+        } catch (IOException e) {
+            throw new FailedRepositoryLoadException("Cannot load vehicles", e);
         }
     }
 

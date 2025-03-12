@@ -1,8 +1,5 @@
 package pl.com.foks.data;
 
-import pl.com.foks.exceptions.RentalException;
-import pl.com.foks.repository.IRepositoryEntry;
-import pl.com.foks.repository.vehicle.IVehicleRepository;
 import pl.com.foks.repository.vehicle.vehicles.Vehicle;
 import pl.com.foks.repository.vehicle.VehicleFactory;
 
@@ -18,9 +15,9 @@ public class VehicleDataManager implements IRepositoryDataManager<Vehicle> {
      * Creates a new instance of the RentalDataManager
      * @param vehicles path to the file with rental data
      */
-    public VehicleDataManager(Path vehicles) {
+    public VehicleDataManager(Path vehicles) throws FileNotFoundException {
         if (!vehicles.toFile().exists()) {
-            throw new RentalException("Rental data file does not exist");
+            throw new FileNotFoundException("Rental data file does not exist");
         }
         this.vehicles = vehicles;
     }
@@ -30,12 +27,8 @@ public class VehicleDataManager implements IRepositoryDataManager<Vehicle> {
         BufferedWriter writer = new BufferedWriter(new FileWriter(vehicles.toFile(), false));
         List<String> vehiclesCSV = new ArrayList<>();
         vehicleList.forEach(vehicle -> vehiclesCSV.add(vehicle.toCSV()));
-        try {
-            writer.write(String.join("\n", vehiclesCSV));
-            writer.flush();
-        } catch (IOException e) {
-            throw new RentalException("Cannot write to file", e);
-        }
+        writer.write(String.join("\n", vehiclesCSV));
+        writer.flush();
     }
 
     @Override

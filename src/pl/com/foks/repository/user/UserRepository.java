@@ -1,7 +1,8 @@
 package pl.com.foks.repository.user;
 
 import pl.com.foks.data.IRepositoryDataManager;
-import pl.com.foks.exceptions.RentalException;
+import pl.com.foks.exceptions.FailedRepositoryLoadException;
+import pl.com.foks.exceptions.FailedRepositorySaveException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,7 +50,7 @@ public class UserRepository implements IUserRepository {
         try {
             dataManager.save(users);
         } catch (Exception e) {
-            throw new RentalException("Failed to save users", e);
+            throw new FailedRepositorySaveException("Failed to save users", e);
         }
     }
 
@@ -60,7 +61,7 @@ public class UserRepository implements IUserRepository {
             users.addAll(dataManager.load());
             idCounter = users.stream().map(User::getIdentifier).max(Integer::compareTo).orElse(0) + 1;
         } catch (Exception e) {
-            throw new RentalException("Failed to load users", e);
+            throw new FailedRepositoryLoadException("Failed to load users", e);
         }
     }
 
