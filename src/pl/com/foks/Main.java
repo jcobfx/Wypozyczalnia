@@ -1,9 +1,14 @@
 package pl.com.foks;
 
-import pl.com.foks.data.RentalDataManager;
-import pl.com.foks.rental.User;
-import pl.com.foks.rental.Rental;
-import pl.com.foks.vehicle.Vehicle;
+import pl.com.foks.data.UserDataManager;
+import pl.com.foks.data.VehicleDataManager;
+import pl.com.foks.repository.user.User;
+import pl.com.foks.repository.vehicle.VehicleFactory;
+import pl.com.foks.repository.vehicle.VehicleRepository;
+import pl.com.foks.repository.user.UserRepository;
+import pl.com.foks.repository.vehicle.vehicles.Car;
+import pl.com.foks.repository.vehicle.vehicles.Motorcycle;
+import pl.com.foks.util.DataUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,168 +20,257 @@ import java.util.logging.Logger;
 public class Main {
     private static final Logger logger = Logger.getLogger(Main.class.getName());
 
-    public static final Path WORKSPACE = Path.of(System.getProperty("user.home"), "rental");
-    public static final Path RENTALS = WORKSPACE.resolve("rentals.csv");
+    private static final String VEHICLES_FILE = "vehicles.csv";
+    private static final String USERS_FILE = "users.csv";
 
-    private static Rental rental = null;
-    private static Map<User, String> users = new HashMap<>();
+    public static final Path WORKSPACE = Path.of(System.getProperty("user.home"), "wypozyczalnia");
+    public static final Path VEHICLES = WORKSPACE.resolve(VEHICLES_FILE);
+    public static final Path USERS = WORKSPACE.resolve(USERS_FILE);
+
+    private static VehicleRepository vehicleRepository = null;
+    private static UserRepository userRepository = null;
     private static User currentUser = null;
 
-    static {
-        if (!WORKSPACE.toFile().exists()) {
-            WORKSPACE.toFile().mkdirs();
-        }
-        users.put(new User(User.Role.ADMIN, "admin", User.DriversLicenseCategory.B), "admin");
-    }
-
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     public static void main(String[] args) throws IOException {
-        InputStream rentals = Main.class.getClassLoader().getResourceAsStream("rentals.csv");
-        if (rentals != null) {
-            if (RENTALS.toFile().exists()) RENTALS.toFile().delete();
-            Files.copy(rentals, RENTALS);
-        }
+        VehicleFactory.registerVehicleClass(Car.class);
+        VehicleFactory.registerVehicleClass(Motorcycle.class);
 
-        rental = new Rental(new RentalDataManager(RENTALS));
-        rental.load();
+        init();
         run();
     }
 
+    /**
+     * Initializes the program
+     * @throws IOException if the file cannot be read
+     */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    private static void init() throws IOException {
+        if (!WORKSPACE.toFile().exists()) {
+            WORKSPACE.toFile().mkdirs();
+        }
+
+        InputStream vehicles = Main.class.getClassLoader().getResourceAsStream(VEHICLES_FILE);
+        if (vehicles != null) {
+            if (VEHICLES.toFile().exists()) VEHICLES.toFile().delete();
+            Files.copy(vehicles, VEHICLES);
+        }
+
+        InputStream users = Main.class.getClassLoader().getResourceAsStream(USERS_FILE);
+        if (users != null) {
+            if (USERS.toFile().exists()) USERS.toFile().delete();
+            Files.copy(users, USERS);
+        }
+
+        vehicleRepository = new VehicleRepository(new VehicleDataManager(VEHICLES));
+        vehicleRepository.load();
+
+        userRepository = new UserRepository(new UserDataManager(USERS));
+        userRepository.load();
+    }
+
+    /**
+     * Runs the program
+     */
     private static void run() {
         final Scanner scanner = new Scanner(System.in);
         logger.info("""
-                Register user (register <name> <driversCategory> <password>)
+                Register user (register <name> <password>)
                 Login (login <name> <password>)
                 """);
         while (scanner.hasNextLine()) {
+            final String line = scanner.nextLine();
+            final String[] split = line.split(" ");
             if (currentUser == null) {
-                final String line = scanner.nextLine();
-                final String[] split = line.split(" ");
                 switch (split[0]) {
-                    case "help": {
-                        logger.info("Available commands: help, register <name> <driversCategory> <password>, login <name> <password>, exit");
+                    case "exit": {
+                        exit();
                         break;
                     }
-                    case "exit": {
-                        System.exit(0);
-                    }
                     case "login": {
-                        final String name = split[1];
-                        final String password = split[2];
-                        users.entrySet().stream().filter(entry -> Objects.equals(entry.getKey().getName(), name) &&
-                                Objects.equals(entry.getValue(), password)).findFirst()
-                                .ifPresent(entry -> currentUser = entry.getKey());
-                        if (currentUser != null) {
-                            logger.info("User logged in");
-                        } else {
-                            logger.info("Login failed");
-                        }
+                        DataUtils.isDataValidThen(split, 3, data -> login(data[1], data[2]));
                         break;
                     }
                     case "register": {
-                        final String name = split[1];
-                        final String driversCategory = split[2];
-                        final String password = split[3];
-                        if (Arrays.stream(User.DriversLicenseCategory.values()).noneMatch(licenseCategory -> licenseCategory.name().equals(driversCategory))) {
-                            logger.info("Register user (register <name> <driversCategory> <password>)");
-                            continue;
-                        }
-                        currentUser = new User(User.Role.CLIENT, name, User.DriversLicenseCategory.valueOf(driversCategory));
-                        users.put(currentUser, password);
-                        logger.info("User registered");
+                        DataUtils.isDataValidThen(split, 3, data -> register(data[1], data[2]));
                         break;
                     }
                     default: {
-                        logger.info("""
-                            Register user (register <name> <driversCategory> <password>)
-                            Login (login <name> <password>)
-                            """);
+                        help();
                     }
                 }
             } else {
-                String line = scanner.nextLine();
-                String[] split = line.split(" ");
                 switch (split[0]) {
-                    case "help": {
-                        logger.info("Available commands: help, self, list, rent <vehicleId>, return <vehicleId>, exit, logout");
+                    case "exit": {
+                        exit();
+                        break;
+                    }
+                    case "logout": {
+                        logout();
+                        break;
+                    }
+                    case "user": {
+                        DataUtils.isDataValidThen(split, 1, data -> logger.info(currentUser.toString()));
                         if (currentUser.getRole() == User.Role.ADMIN) {
-                            logger.info("Admin commands: add, remove");
+                            DataUtils.isDataValidThen(split, 2, data -> user(Integer.parseInt(data[1])));
                         }
                         break;
                     }
-                    case "self": {
-                        logger.info(currentUser.toString());
-                        break;
-                    }
-                    case "list": {
-                        StringBuilder sb = new StringBuilder("\n");
-                        rental.getVehicles().forEach(vehicle -> sb.append(vehicle.getId()).append(". ")
-                                .append(vehicle).append("\n"));
-                        logger.info(sb.toString());
+                    case "vehicles": {
+                        vehicles();
                         break;
                     }
                     case "rent": {
-                        if (split.length == 2) {
-                            int id = Integer.parseInt(split[1]);
-                            if (id >= 0 && id < rental.getVehicles().size()) {
-                                if (rental.rentVehicle(currentUser, rental.getVehicles().get(id))) {
-                                    logger.info("Vehicle rented");
-                                } else {
-                                    logger.info("Cannot rent vehicle");
-                                }
-                            } else {
-                                logger.warning("Vehicle not found");
-                            }
-                        } else {
-                            logger.info("rent <vehicle>");
-                        }
+                        DataUtils.isDataValidThen(split, 2, data -> rent(Integer.parseInt(data[1])));
                         break;
                     }
                     case "return": {
-                        if (split.length == 2) {
-                            int id = Integer.parseInt(split[1]);
-                            if (id >= 0 && id < rental.getVehicles().size()) {
-                                if (rental.returnVehicle(currentUser, rental.getVehicles().get(id))) {
-                                    logger.info("Vehicle returned");
-                                } else {
-                                    logger.info("Cannot return vehicle");
-                                }
-                            } else {
-                                logger.warning("Vehicle not found");
-                            }
-                        } else {
-                            logger.info("return <vehicle>");
-                        }
-                        break;
-                    }
-                    case "exit": {
-                        rental.save();
-                        System.exit(0);
-                    }
-                    case "logout": {
-                        currentUser = null;
-                        logger.info("User logged out");
-                        logger.info("""
-                            Register user (register <name> <driversCategory> <password>)
-                            Login (login <name> <password>)
-                            """);
+                        DataUtils.isDataValidThen(split, 2, data -> _return(Integer.parseInt(data[1])));
                         break;
                     }
                     case "add": {
-
+                        if (currentUser.getRole() == User.Role.ADMIN) add();
                     }
                     case "remove": {
-
+                        if (currentUser.getRole() == User.Role.ADMIN) remove();
+                    }
+                    case "users": {
+                        if (currentUser.getRole() == User.Role.ADMIN) users();
                     }
                     default: {
-                        logger.info("Available commands: help, self, list, rent <vehicleId>, return <vehicleId>, exit, logout");
-                        if (currentUser.getRole() == User.Role.ADMIN) {
-                            logger.info("Admin commands: add, remove");
-                        }
+                        help();
                     }
                 }
             }
         }
+    }
 
+    /**
+     * Registers a user
+     * @param login login of the user
+     * @param password password of the user
+     */
+    private static void register(String login, String password) {
+        userRepository.register(User.Role.CLIENT, login, password).ifPresentOrElse(
+                user -> {
+                    currentUser = user;
+                    logger.info("User registered");
+                },
+                () -> logger.warning("Cannot register user")
+        );
+    }
+
+    /**
+     * Logs in a user
+     * @param login login of the user
+     * @param password password of the user
+     */
+    private static void login(String login, String password) {
+        userRepository.getAuthentication().authenticate(login, password).ifPresentOrElse(
+                user -> {
+                    currentUser = user;
+                    logger.info("User logged in");
+                },
+                () -> logger.warning("Cannot login")
+        );
+    }
+
+    /**
+     * Logs out the user
+     */
+    private static void logout() {
+        currentUser = null;
+        logger.info("User logged out");
+        logger.info("""
+                    Register user (register <name> <password>)
+                    Login (login <name> <password>)
+                    """);
+    }
+
+    /**
+     * Exits the program
+     */
+    private static void exit() {
+        vehicleRepository.save();
+        userRepository.save();
+        System.exit(0);
+    }
+
+    /**
+     * Displays help
+     */
+    private static void help() {
+        if (currentUser != null) {
+            logger.info("Available commands: help, exit, logout, user, vehicles, rent <vehicleId>, return <vehicleId>");
+            if (currentUser.getRole() == User.Role.ADMIN) {
+                logger.info("Admin commands: add, remove, users, user <userId>");
+            }
+        } else {
+            logger.info("Available commands: help, register <name> <password>, login <name> <password>, exit");
+        }
+    }
+
+    /**
+     * Displays all vehicles
+     */
+    private static void vehicles() {
+        logger.info(vehicleRepository.getVehicles().toString());
+    }
+
+    /**
+     * Rents a vehicle
+     * @param id id of the vehicle
+     */
+    private static void rent(int id) {
+        if (vehicleRepository.getIdentifiers().contains(id)) {
+            if (vehicleRepository.rentVehicle(currentUser, id)) {
+                logger.info("Vehicle rented");
+            } else {
+                logger.info("Cannot rent vehicle");
+            }
+        } else {
+            logger.warning("Vehicle not found");
+        }
+    }
+
+    /**
+     * Returns a vehicle
+     * @param id id of the vehicle
+     */
+    private static void _return(int id) {
+        if (vehicleRepository.getIdentifiers().contains(id)) {
+            if (vehicleRepository.returnVehicle(currentUser, id)) {
+                logger.info("Vehicle returned");
+            } else {
+                logger.info("Cannot return vehicle");
+            }
+        } else {
+            logger.warning("Vehicle not found");
+        }
+    }
+
+    private static void add() {
+
+    }
+
+    private static void remove() {
+
+    }
+
+    /**
+     * Displays all users
+     */
+    private static void users() {
+        logger.info(userRepository.getUsers().toString());
+    }
+
+    /**
+     * Displays a user
+     * @param id id of the user
+     */
+    private static void user(int id) {
+        userRepository.getUser(id).ifPresentOrElse(
+                user -> logger.info(user.toString()),
+                () -> logger.warning("User not found")
+        );
     }
 }
