@@ -18,6 +18,9 @@ public class VehicleRepository implements IVehicleRepository {
     public VehicleRepository(IRepositoryDataManager<Vehicle> dataManager) {
         vehicles = new ArrayList<>();
         this.dataManager = dataManager;
+
+        addVehicle(VehicleFactory.createVehicle("Car;0;BMW;X5;2019;100000;false".split(";")));
+        addVehicle(VehicleFactory.createVehicle("Motorcycle;1;Suzuki;GSX-R1000;2018;20000;false;A".split(";")));
     }
 
     @Override
@@ -99,8 +102,7 @@ public class VehicleRepository implements IVehicleRepository {
     @Override
     public void load() {
         try {
-            vehicles.clear();
-            vehicles.addAll(dataManager.load());
+            dataManager.load().forEach(this::addVehicle);
         } catch (IOException e) {
             throw new FailedRepositoryLoadException("Cannot load vehicles", e);
         }

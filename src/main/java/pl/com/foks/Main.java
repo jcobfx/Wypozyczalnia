@@ -31,7 +31,9 @@ public class Main {
         VehicleFactory.registerVehicleClass(Car.class);
         VehicleFactory.registerVehicleClass(Motorcycle.class);
 
-        init(Boolean.parseBoolean(args[0]));
+        if (args.length == 0) init(false);
+        else init(Boolean.parseBoolean(args[0]));
+
         new App(vehicleRepository, userRepository).run();
     }
 
