@@ -2,7 +2,9 @@ package pl.com.foks.command;
 
 import pl.com.foks.App;
 import pl.com.foks.repository.user.User;
+import pl.com.foks.repository.vehicle.VehicleFactory;
 import pl.com.foks.repository.vehicle.VehicleRepository;
+import pl.com.foks.repository.vehicle.vehicles.Vehicle;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,43 +24,44 @@ public class CommandFactory {
     public Command createCommand(String commandName) {
         return Optional.ofNullable(com.commands.get(commandName.toLowerCase())).
             orElseGet(() -> {
-                com.help.accept(null);
-                return com.unknown;
+                com.HELP.accept(null);
+                return com.UNKNOWN;
             });
     }
 
+    @SuppressWarnings("FieldCanBeLocal")
     private class Commands {
         private final Map<String, Command> commands;
 
         private Commands() {
             commands = new HashMap<>();
-            putCommand(unknown);
-            putCommand(exit);
-            putCommand(help);
-            putCommand(register);
-            putCommand(login);
-            putCommand(logout);
-            putCommand(user);
-            putCommand(vehicles);
-            putCommand(rent);
-            putCommand(_return);
-            putCommand(add);
-            putCommand(remove);
-            putCommand(users);
+            putCommand(UNKNOWN);
+            putCommand(EXIT);
+            putCommand(HELP);
+            putCommand(REGISTER);
+            putCommand(LOGIN);
+            putCommand(LOGOUT);
+            putCommand(USER);
+            putCommand(VEHICLES);
+            putCommand(RENT);
+            putCommand(RETURN);
+            putCommand(ADD);
+            putCommand(REMOVE);
+            putCommand(USERS);
         }
 
         private void putCommand(Command command) {
             commands.put(command.getName(), command);
         }
 
-        private final Command unknown = new Command("unknown") {
+        private final Command UNKNOWN = new Command("unknown") {
             @Override
             public void accept(String[] args) {
                 appLogger.info("Unknown command");
             }
         };
 
-        private final Command exit = new Command("exit") {
+        private final Command EXIT = new Command("exit") {
             @Override
             public void accept(String[] args) {
                 app.save();
@@ -66,7 +69,7 @@ public class CommandFactory {
             }
         };
 
-        private final Command help = new Command("help") {
+        private final Command HELP = new Command("help") {
             @Override
             public void accept(String[] args) {
                 final User currentUser = app.getCurrentUser();
@@ -81,12 +84,12 @@ public class CommandFactory {
             }
         };
 
-        private final Command register = new Command("register") {
+        private final Command REGISTER = new Command("register") {
             @Override
-            public void accept(String[] strings) {
-                if (strings.length != 2) return;
+            public void accept(String[] args) {
+                if (args.length != 2) return;
 
-                app.getUserRepository().register(User.Role.CLIENT, strings[0], strings[1]).ifPresentOrElse(
+                app.getUserRepository().register(User.Role.CLIENT, args[0], args[1]).ifPresentOrElse(
                         user -> {
                             app.setCurrentUser(user);
                             appLogger.info("User registered");
@@ -96,12 +99,12 @@ public class CommandFactory {
             }
         };
 
-        private final Command login = new Command("login") {
+        private final Command LOGIN = new Command("login") {
             @Override
-            public void accept(String[] strings) {
-                if (strings.length != 2) return;
+            public void accept(String[] args) {
+                if (args.length != 2) return;
 
-                app.getUserRepository().getAuthentication().authenticate(strings[0], strings[1]).ifPresentOrElse(
+                app.getUserRepository().getAuthentication().authenticate(args[0], args[1]).ifPresentOrElse(
                         user -> {
                             app.setCurrentUser(user);
                             appLogger.info("User logged in");
@@ -111,9 +114,9 @@ public class CommandFactory {
             }
         };
 
-        private final Command logout = new Command("logout") {
+        private final Command LOGOUT = new Command("logout") {
             @Override
-            public void accept(String[] strings) {
+            public void accept(String[] args) {
                 final User currentUser = app.getCurrentUser();
                 if (currentUser == null) return;
 
@@ -125,23 +128,23 @@ public class CommandFactory {
             }
         };
 
-        private final Command user = new Command("user") {
+        private final Command USER = new Command("user") {
             @Override
-            public void accept(String[] strings) {
+            public void accept(String[] args) {
                 final User currentUser = app.getCurrentUser();
                 if (currentUser == null) return;
 
-                if (currentUser.getRole() == User.Role.ADMIN && strings.length == 1) {
-                    appLogger.info(app.getUserRepository().getUser(Integer.parseInt(strings[0])).toString());
+                if (currentUser.getRole() == User.Role.ADMIN && args.length == 1) {
+                    appLogger.info(app.getUserRepository().getUser(Integer.parseInt(args[0])).toString());
                 } else {
                     appLogger.info(app.getCurrentUser().toString());
                 }
             }
         };
 
-        private final Command vehicles = new Command("vehicles") {
+        private final Command VEHICLES = new Command("vehicles") {
             @Override
-            public void accept(String[] strings) {
+            public void accept(String[] args) {
                 final User currentUser = app.getCurrentUser();
                 if (currentUser == null) return;
 
@@ -149,14 +152,14 @@ public class CommandFactory {
             }
         };
 
-        private final Command rent = new Command("rent") {
+        private final Command RENT = new Command("rent") {
             @Override
-            public void accept(String[] strings) {
+            public void accept(String[] args) {
                 final User currentUser = app.getCurrentUser();
-                if (currentUser == null || strings.length != 1) return;
+                if (currentUser == null || args.length != 1) return;
 
                 final VehicleRepository vehicleRepository = app.getVehicleRepository();
-                final int id = Integer.parseInt(strings[0]);
+                final int id = Integer.parseInt(args[0]);
                 if (vehicleRepository.getIdentifiers().contains(id)) {
                     if (vehicleRepository.rentVehicle(currentUser, id)) {
                         appLogger.info("Vehicle rented");
@@ -169,14 +172,14 @@ public class CommandFactory {
             }
         };
 
-        private final Command _return = new Command("return") {
+        private final Command RETURN = new Command("return") {
             @Override
-            public void accept(String[] strings) {
+            public void accept(String[] args) {
                 final User currentUser = app.getCurrentUser();
-                if (currentUser == null || strings.length != 1) return;
+                if (currentUser == null || args.length != 1) return;
 
                 final VehicleRepository vehicleRepository = app.getVehicleRepository();
-                final int id = Integer.parseInt(strings[0]);
+                final int id = Integer.parseInt(args[0]);
                 if (vehicleRepository.getIdentifiers().contains(id)) {
                     if (vehicleRepository.returnVehicle(currentUser, id)) {
                         appLogger.info("Vehicle returned");
@@ -189,25 +192,43 @@ public class CommandFactory {
             }
         };
 
-        private final Command add = new Command("add") {
+        private final Command ADD = new Command("add") {
             @Override
-            public void accept(String[] strings) {
+            public void accept(String[] args) {
                 final User currentUser = app.getCurrentUser();
-                if (currentUser == null || currentUser.getRole() != User.Role.ADMIN) return;
+                if (currentUser == null || currentUser.getRole() != User.Role.ADMIN || args.length < 7) return;
+
+                final Vehicle vehicle;
+                try {
+                    vehicle = VehicleFactory.createVehicle(args);
+                    if (app.getVehicleRepository().addVehicle(vehicle)) {
+                        appLogger.info("Vehicle added");
+                    } else {
+                        appLogger.warning("Cannot add vehicle");
+                    };
+                } catch (RuntimeException e) {
+                    appLogger.warning("Cannot add vehicle");
+                }
             }
         };
 
-        private final Command remove = new Command("remove") {
+        private final Command REMOVE = new Command("remove") {
             @Override
-            public void accept(String[] strings) {
+            public void accept(String[] args) {
                 final User currentUser = app.getCurrentUser();
-                if (currentUser == null || currentUser.getRole() != User.Role.ADMIN) return;
+                if (currentUser == null || currentUser.getRole() != User.Role.ADMIN || args.length != 1) return;
+
+                if (app.getVehicleRepository().removeVehicle(Integer.parseInt(args[0]))) {
+                    appLogger.info("Vehicle removed");
+                } else {
+                    appLogger.warning("Cannot remove vehicle");
+                }
             }
         };
 
-        private final Command users = new Command("users") {
+        private final Command USERS = new Command("users") {
             @Override
-            public void accept(String[] strings) {
+            public void accept(String[] args) {
                 final User currentUser = app.getCurrentUser();
                 if (currentUser == null || currentUser.getRole() != User.Role.ADMIN) return;
 

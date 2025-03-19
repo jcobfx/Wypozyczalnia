@@ -1,5 +1,6 @@
 package pl.com.foks.repository.user;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import pl.com.foks.data.IRepositoryDataManager;
 import pl.com.foks.exceptions.FailedRepositoryLoadException;
 import pl.com.foks.exceptions.FailedRepositorySaveException;
@@ -20,15 +21,25 @@ public class UserRepository implements IUserRepository {
         authentication = new Authentication();
         users = new ArrayList<>();
         this.dataManager = dataManager;
+
+        register(User.Role.ADMIN, "admin", "admin");
     }
 
     public Optional<User> register(User.Role role, String login, String password) {
         if (users.stream().anyMatch(u -> Objects.equals(u.getLogin(), login))) {
             return Optional.empty();
         }
-        final User user = new User(idCounter++, role, login, password);
+        final User user = new User(idCounter++, role, login, DigestUtils.sha256Hex(password));
         users.add(user);
         return Optional.of(user);
+    }
+
+    private boolean register(User user) {
+        if (users.stream().anyMatch(u -> u.getIdentifier() == user.getIdentifier() || Objects.equals(u.getLogin(), user.getLogin()))) {
+            return false;
+        }
+        users.add(user);
+        return true;
     }
 
     @Override
@@ -57,8 +68,7 @@ public class UserRepository implements IUserRepository {
     @Override
     public void load() {
         try {
-            users.clear();
-            users.addAll(dataManager.load());
+            dataManager.load().forEach(this::register);
             idCounter = users.stream().map(User::getIdentifier).max(Integer::compareTo).orElse(0) + 1;
         } catch (Exception e) {
             throw new FailedRepositoryLoadException("Failed to load users", e);
@@ -71,7 +81,8 @@ public class UserRepository implements IUserRepository {
 
     public class Authentication {
         public Optional<User> authenticate(String username, String password) {
-            return users.stream().filter(user -> user.getLogin().equals(username) && user.getPassword().equals(password))
+            String hashedPassword = DigestUtils.sha256Hex(password);
+            return users.stream().filter(user -> user.getLogin().equals(username) && user.getPassword().equals(hashedPassword))
                     .findFirst();
         }
     }

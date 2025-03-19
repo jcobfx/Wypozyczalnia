@@ -4,7 +4,6 @@ import pl.com.foks.command.CommandFactory;
 import pl.com.foks.repository.user.User;
 import pl.com.foks.repository.user.UserRepository;
 import pl.com.foks.repository.vehicle.VehicleRepository;
-import pl.com.foks.util.ValidatorUtils;
 
 import java.util.Arrays;
 import java.util.Scanner;
