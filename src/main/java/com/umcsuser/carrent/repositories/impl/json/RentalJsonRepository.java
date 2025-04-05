@@ -6,6 +6,7 @@ import com.umcsuser.carrent.repositories.RentalRepository;
 import com.umcsuser.carrent.db.JsonFileStorage;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class RentalJsonRepository implements RentalRepository {
 
@@ -46,12 +47,18 @@ public class RentalJsonRepository implements RentalRepository {
         storage.save(rentals);
     }
 
-    //TODO: Użycie funkcji findByVehicleIdAndReturnDateIsNull w swojej logice
     @Override
     public Optional<Rental> findByVehicleIdAndReturnDateIsNull(String vehicleId) {
         return rentals.stream()
                 .filter(r -> r.getVehicleId().equals(vehicleId))
                 .filter(r -> r.getReturnDate() == null)
                 .findFirst();
+    }
+
+    @Override
+    public List<Rental> findByUserId(String userId) {
+        return rentals.stream()
+                .filter(r -> r.getUserId().equals(userId))
+                .collect(Collectors.toList());
     }
 }

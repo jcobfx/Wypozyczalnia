@@ -1,6 +1,5 @@
 package com.umcsuser.carrent.app;
 
-import com.umcsuser.carrent.db.JdbcConnectionManager;
 import com.umcsuser.carrent.repositories.RentalRepository;
 import com.umcsuser.carrent.repositories.UserRepository;
 import com.umcsuser.carrent.repositories.VehicleRepository;
@@ -14,17 +13,16 @@ import com.umcsuser.carrent.services.AuthService;
 import com.umcsuser.carrent.services.RentalService;
 import com.umcsuser.carrent.services.VehicleService;
 
-import java.sql.Connection;
-
 public class Main {
     public static void main(String[] args) {
-        String storageType = "json";
-
-        //TODO: Zmiana typu storage w zaleznosci od parametru przekazanego do programu
-        //TODO: Utworzenie RentalJdbcRepository implementujacej RentalRepository
-        //TODO: Utworzenie UserJdbcRepository implementujacej UserRepository
-
-        //TODO: Dorzucenie do projektu swoich jsonrepo.
+        String storageType;
+        if (args.length < 1) {
+            storageType = "json";
+        } else if (args.length == 1) {
+            storageType = args[0];
+        } else {
+            throw new IllegalArgumentException("Too many arguments");
+        }
 
         UserRepository userRepo;
         VehicleRepository vehicleRepo;
@@ -43,13 +41,10 @@ public class Main {
             }
             default -> throw new IllegalArgumentException("Unknown storage type: " + storageType);
         }
-        //TODO:Przerzucenie logiki wykorzystującej repozytoria do serwisów
         AuthService authService = new AuthService(userRepo);
-        //TODO:W VehicleService mozna wykorzystac rentalRepo dla wyszukania dostepnych pojazdow
         VehicleService vehicleService = new VehicleService(vehicleRepo, rentalRepo);
         RentalService rentalService = new RentalService(rentalRepo);
 
-        //TODO:Przerzucenie logiki interakcji z userem do App
         App app = new App(authService, vehicleService, rentalService);
         app.run();
 
