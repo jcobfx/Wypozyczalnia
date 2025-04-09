@@ -78,8 +78,9 @@ public class VehicleJdbcRepository implements VehicleRepository {
     public Vehicle save(Vehicle vehicle) {
         if (vehicle.getId() == null || vehicle.getId().isBlank()) {
             vehicle.setId(UUID.randomUUID().toString());
-        } else {
-            deleteById(vehicle.getId());
+        } else if (existsById(vehicle.getId())) {
+            updateById(vehicle);
+            return vehicle;
         }
 
         String sql = "INSERT INTO vehicle (id, category, brand, model, year, plate, price, attributes) VALUES (?, ?, ?, ?, ?, ?, ?, ?::jsonb)";
@@ -112,6 +113,43 @@ public class VehicleJdbcRepository implements VehicleRepository {
             stmt.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException("Error occurred while deleting vehicle", e);
+        }
+    }
+
+    private boolean existsById(String id) {
+        String sql = "SELECT COUNT(*) FROM vehicle WHERE id = ?";
+        try (Connection connection = JdbcConnectionManager.getInstance().getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql)) {
+
+            stmt.setString(1, id);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error occurred while checking vehicle existence", e);
+        }
+        return false;
+    }
+
+    private void updateById(Vehicle vehicle) {
+        String sql = "UPDATE vehicle SET category = ?, brand = ?, model = ?, year = ?, plate = ?, price = ?, attributes = ?::jsonb WHERE id = ?";
+        try (Connection connection = JdbcConnectionManager.getInstance().getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql)) {
+
+            stmt.setString(1, vehicle.getCategory());
+            stmt.setString(2, vehicle.getBrand());
+            stmt.setString(3, vehicle.getModel());
+            stmt.setInt(4, vehicle.getYear());
+            stmt.setString(5, vehicle.getPlate());
+            stmt.setDouble(6, vehicle.getPrice());
+            stmt.setString(7, gson.toJson(vehicle.getAttributes()));
+            stmt.setString(8, vehicle.getId());
+
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error occurred while updating vehicle", e);
         }
     }
 }

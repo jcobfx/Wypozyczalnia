@@ -9,6 +9,7 @@ import lombok.extern.java.Log;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Log
@@ -36,9 +37,7 @@ public class VehicleService {
         Optional<Vehicle> vehicle = vehicleRepository.findById(vehicleId);
         if (vehicle.isPresent()) {
             rentalRepository.findByVehicleIdAndReturnDateIsNull(vehicleId)
-                    .ifPresentOrElse((rental) -> {
-                        log.warning("Vehicle is already rented");
-                    }, () -> {
+                    .ifPresentOrElse((rental) -> log.warning("Vehicle is already rented"), () -> {
                         Rental rental = new Rental(
                                 "",
                                 vehicleId,
@@ -63,11 +62,41 @@ public class VehicleService {
                         rental.setReturnDate(LocalDateTime.now().toString());
                         rentalRepository.save(rental);
                         log.info("Vehicle returned successfully");
-                    }, () -> {
-                        log.warning("You are not the one who rented this vehicle");
-                    });
+                    }, () -> log.warning("You are not the one who rented this vehicle"));
         } else {
             log.warning("Vehicle not found");
         }
+    }
+
+    public void addVehicleFromString(String vehicle, Map<String, Object> attributes) {
+        Optional<Vehicle> vehicleOptional = stringToVehicle(vehicle, attributes);
+        if (vehicleOptional.isEmpty()) {
+            log.warning("Invalid vehicle data");
+            return;
+        }
+        vehicleRepository.save(vehicleOptional.get());
+        log.info("Vehicle added successfully");
+    }
+
+    public void removeVehicle(String vehicleId) {
+        vehicleRepository.deleteById(vehicleId);
+        log.info("Vehicle removed successfully");
+    }
+
+    private Optional<Vehicle> stringToVehicle(String vehicle, Map<String, Object> attributes) {
+        String[] parts = vehicle.split(",");
+        if (parts.length == 6) {
+            return Optional.of(Vehicle.builder()
+                    .id("")
+                    .category(parts[0])
+                    .brand(parts[1])
+                    .model(parts[2])
+                    .year(Integer.parseInt(parts[3]))
+                    .plate(parts[4])
+                    .price(Double.parseDouble(parts[5]))
+                    .attributes(attributes)
+                    .build());
+        }
+        return Optional.empty();
     }
 }

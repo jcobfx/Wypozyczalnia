@@ -6,6 +6,8 @@ import com.umcsuser.carrent.services.RentalService;
 import com.umcsuser.carrent.services.VehicleService;
 import lombok.extern.java.Log;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 
 @Log
@@ -71,6 +73,27 @@ public class App {
                         break;
                     }
                     case "vehicles": {
+                        if (loggedUser.getRole().equals("ADMIN")) {
+                            log.info("-, add, remove");
+                            String cmd = scanner.nextLine();
+                            if (cmd.equals("add")) {
+                                log.info("Enter vehicle details: ");
+                                String details = scanner.nextLine();
+                                log.info("Enter additional attributes (key=value): ");
+                                String attributes = scanner.nextLine();
+                                Map<String, Object> attrMap = getAttrMap(attributes);
+                                vehicleService.addVehicleFromString(details, attrMap);
+                                break;
+                            } else if (cmd.equals("remove")) {
+                                log.info("Enter vehicle ID: ");
+                                String vehicleId = scanner.next();
+                                vehicleService.removeVehicle(vehicleId);
+                                break;
+                            }
+                            log.info("Vehicles:");
+                        } else {
+                            log.info("Available vehicles:");
+                        }
                         vehicleService.listVehicles(loggedUser.getRole()).forEach((v) -> log.info(v.toString()));
                         break;
                     }
@@ -104,5 +127,19 @@ public class App {
                 }
             }
         }
+    }
+
+    private static Map<String, Object> getAttrMap(String attributes) {
+        Map<String, Object> attrMap = new HashMap<>();
+        if (!attributes.isBlank()) {
+            String[] attrArray = attributes.split(",");
+            for (String attr : attrArray) {
+                String[] keyValue = attr.split("=");
+                if (keyValue.length == 2) {
+                    attrMap.put(keyValue[0].trim(), keyValue[1].trim());
+                }
+            }
+        }
+        return attrMap;
     }
 }
